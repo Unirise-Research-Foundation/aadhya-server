@@ -1,0 +1,12 @@
+services:
+  api:
+    container_name:  unirise-aadhya-server
+    build:
+      context: .
+      dockerfile: docker/dev/Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
