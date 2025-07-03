@@ -10,8 +10,13 @@ export class AppController {
     return this.appService.getServerUpMessage();
   }
 
-  @Get("/health")
-  getHealthCheck():string {
+  @Get('/health')
+  getHealthCheck(): string {
     return this.appService.getHealthCheck();
+  }
+
+  @Get('/db-check')
+  checkDb() {
+    return this.appService.checkDbConnection();
   }
 }
