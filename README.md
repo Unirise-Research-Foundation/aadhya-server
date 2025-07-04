@@ -98,3 +98,67 @@ Then try running the app again:
 ```bash
 pnpm start:dev
 ```
+
+
+
+## Setup: TypeORM, Global Interceptor, and Exception Filter
+
+### 1. TypeORM Configuration (with `.env`)
+
+#### Installed Packages:
+```bash
+pnpm add @nestjs/typeorm typeorm pg
+```
+
+#### Created `src/typeorm.config.ts`:
+
+#### Injected TypeORM in `AppModule`:
+```ts
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) =>
+        configService.get('typeorm'),
+      inject: [ConfigService],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+---
+
+### 2. ⚙️ Added Global Response Interceptor
+
+#### Created `src/common/interceptors/response.interceptor.ts`:
+#### Registered in `AppModule`:
+```ts
+providers: [
+  {
+    provide: APP_INTERCEPTOR,
+    useClass: ResponseInterceptor,
+  },
+]
+```
+
+
+
+---
+
+### 3. 🛡️ Added Global Exception Filter
+
+#### Created `src/common/filters/global-exception.filter.ts`:
+
+#### Registered in `AppModule`:
+```ts
+providers: [
+  {
+    provide: APP_FILTER,
+    useClass: GlobalExceptionFilter,
+  },
+]
+```
+
+---
