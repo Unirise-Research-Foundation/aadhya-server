@@ -283,6 +283,13 @@ const typeormConfig = {
 #### Generate a migration
 This will create a migration file based on your entity changes.
 
+> Make sure when running locally change the DB_PASSWORD to your local database password and host to localhost in .env file 
+
+#### Locally:
+```bash
+npm run migration:generate --name=CreateChildTable
+```
+
 ```bash
 docker compose exec api npm migration:generate --name=CreateChildTable
 ```
@@ -294,6 +301,12 @@ Make sure `package.json` contains:
 
 #### Run the migration
 This will apply all pending migrations to the Docker database.
+
+
+#### Locally:
+```bash
+npm run migration:run
+```
 
 ```bash
 docker compose exec api npm migration:run
@@ -324,6 +337,11 @@ npm run migration:revert
 #### Inside Docker container:
 ```bash
 docker compose exec api npm run migration:revert
+```
+
+Make sure `package.json` contains:
+```json
+"migration:revert": "npm run typeorm -- -d ./src/typeorm.config.ts migration:revert"
 ```
 
 > This will undo the last executed migration using the `down()` method defined in the migration file.
