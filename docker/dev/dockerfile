@@ -4,21 +4,23 @@ FROM node:20
 # Set working directory
 WORKDIR /usr/src/app
 
+# Install pnpm globally
+RUN npm install -g pnpm
+
 # Copy package files first to install deps
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies using pnpm
+RUN pnpm install
 
 # Copy source code
 COPY . .
 
 # Install dev tools like ts-node-dev
-RUN npm install --save-dev ts-node-dev
+RUN pnpm add -D ts-node-dev
 
 # Expose port used by NestJS
 EXPOSE 3001
 
 # Start app in dev mode
-CMD ["npm", "run", "start:dev"]
-
+CMD ["pnpm", "start:dev"]

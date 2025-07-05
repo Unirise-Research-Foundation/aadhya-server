@@ -162,3 +162,168 @@ providers: [
 ```
 
 ---
+
+##  Child Module Setup
+
+This section documents the steps to create the `Child` module with entity, service, and controller using NestJS CLI and TypeORM.
+
+---
+
+#### 📦 1. Generate Child Module, Controller, and Service
+
+```bash
+nest generate module child
+nest generate service child
+nest generate controller child
+```
+
+This creates:
+
+```
+src/
+  child/
+    child.module.ts
+    child.service.ts
+    child.controller.ts
+```
+
+---
+
+#### 🧱 2. Create CommonEntity Base Class
+
+Create a reusable base entity to track creation, update, and soft-delete timestamps.
+
+> 📄 File: `src/common/entities/common.entity.ts`
+
+```ts
+export abstract class CommonEntity extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @DeleteDateColumn({ nullable: true })
+  deletedAt: Date | null;
+}
+```
+
+---
+
+#### 3. Define Child Entity
+
+> 📄 File: `src/child/entities/child.entity.ts`
+
+```ts
+@Entity()
+export class Child extends CommonEntity {
+  @Column()
+  name: string;
+
+  @Column()
+  yob: number; // year of birth
+}
+```
+
+---
+
+✅ Now you have:
+- A `Child` module with service and controller scaffolded
+- A reusable `CommonEntity` for consistent timestamps
+- `Child` entity set up for future API and database work
+
+
+## Adding the module to TypeORM and creating migrations
+- There are 2 ways to do this in the `typeorm.config.ts` we can individually add the entities or provide the folder path
+
+1. Individual entites
+``` ts
+const typeormConfig = {
+  type: 'postgres',
+  host: process.env.DATABASE_HOST,
+  port: parseInt(process.env.DATABASE_PORT, 10),
+  username: process.env.DATABASE_USERNAME,
+  password: process.env.DATABASE_PASSWORD,
+  database: process.env.DATABASE_NAME,
+
+  // ✅ Register entity here
+  entities: [Child],
+  migrations: ['dist/migrations/*{.ts,.js}'],
+  
+  autoLoadEntities: true,
+  synchronize: false,
+};
+```
+
+2. Providing folder path
+``` ts
+const typeormConfig = {
+  type: 'postgres',
+  host: process.env.DATABASE_HOST,
+  port: parseInt(process.env.DATABASE_PORT, 10),
+  username: process.env.DATABASE_USERNAME,
+  password: process.env.DATABASE_PASSWORD,
+  database: process.env.DATABASE_NAME,
+
+  // ✅ Register entity here
+  entities: ['dist/**/*.entity{.ts,.js}'],
+  migrations: ['dist/migrations/*{.ts,.js}'],
+
+  autoLoadEntities: true,
+  synchronize: false,
+};
+```
+
+## Migrations
+#### Added migration related scripts to `package.json`
+
+#### Generate a migration
+This will create a migration file based on your entity changes.
+
+```bash
+docker compose exec api npm migration:generate --name=CreateChildTable
+```
+
+Make sure `package.json` contains:
+```json
+"migration:generate": "npm run typeorm -- -d ./src/typeorm.config.ts migration:generate src/migrations/$npm_config_name"
+```
+
+#### Run the migration
+This will apply all pending migrations to the Docker database.
+
+```bash
+docker compose exec api npm migration:run
+```
+
+Make sure `package.json` contains:
+```json
+"migration:run": "npm run typeorm migration:run -- -d ./src/typeorm.config.ts"
+```
+
+#### Summary
+| Action               | Effect                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| `docker compose up`  | Starts containers, creates DB, but doesn't create tables unless migrations are run |
+| `migration:generate` | Compares entity files with DB, creates `.ts` file with SQL changes                 |
+| `migration:run`      | Executes migration SQL against the DB, creates tables                              |
+
+
+#### Reverting a Migration (Rollback)
+
+If you need to roll back the most recent migration:
+
+#### Locally:
+```bash
+npm run migration:revert
+```
+
+#### Inside Docker container:
+```bash
+docker compose exec api npm run migration:revert
+```
+
+> This will undo the last executed migration using the `down()` method defined in the migration file.
