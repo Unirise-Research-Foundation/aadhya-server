@@ -345,3 +345,43 @@ Make sure `package.json` contains:
 ```
 
 > This will undo the last executed migration using the `down()` method defined in the migration file.
+
+
+---
+
+
+## Child Module API (v1)
+
+All routes are prefixed with `/api/v1/children`.
+
+### 🔹 Endpoints
+
+| Method | Endpoint                  | Description                  |
+|--------|---------------------------|------------------------------|
+| GET    | `/`                       | List all children with pagination. Excludes soft-deleted records. |
+| GET    | `/:id`                    | Get a child by ID. Excludes soft-deleted records. |
+| POST   | `/`                       | Create a new child. Requires validated payload. |
+| PUT    | `/:id`                    | Update an existing child. Only if not soft-deleted. |
+| DELETE | `/:id`                    | Soft delete a child by setting `deletedAt` timestamp. |
+
+### 🔸 Request/Response Format
+
+All responses are wrapped using a global interceptor:
+
+```json
+{
+  "status": 200,
+  "message": "Success",
+  "data": { ... },
+  "stack": null
+}
+```
+
+### Validations (DTO)
+- `name`: Required `string`
+- `yob`: Integer, must be between `1900` and current year
+
+###  Notes
+- Soft deletes are handled using the `deletedAt` field.
+- All `GET` routes exclude records where `deletedAt IS NOT NULL`.
+- API versioning is handled using `@Version('1')`.
