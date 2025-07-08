@@ -26,3 +26,6 @@ pnpm-lock.yaml
 # IDE / editor files
 .vscode
 *.swp
+
+# Migration files
+src/migrations/**

@@ -4,10 +4,10 @@ import typeORM from './typeorm.config';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Test } from './entities/test.entity';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { ChildModule } from './child/child.module';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
       inject: [ConfigService],
       useFactory: (ConfigService: ConfigService) => ConfigService.get('typeorm') as any,
     }),
-    TypeOrmModule.forFeature([Test]),
+    ChildModule,
   ],
   controllers: [AppController],
   providers: [
