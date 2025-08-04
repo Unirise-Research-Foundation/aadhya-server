@@ -1,6 +1,6 @@
 import { IsString, IsInt, Min, Max } from 'class-validator';
 
-export class CreateChildDto {
+export class CreatePersonDto {
   @IsString()
   name: string;
 

@@ -7,12 +7,12 @@ dotenvConfig({ path: '.env' });
 
 // typeorm config parameters
 export const typeormConfig = {
-  type: process.env.DATABASE_TYPE,
-  host: process.env.DATABASE_HOST,
-  port: parseInt(process.env.DATABASE_PORT!, 10),
-  username: process.env.DATABASE_USERNAME,
-  password: process.env.DATABASE_PASSWORD,
-  database: process.env.DATABASE_NAME,
+  type: process.env.DATABASE_TYPE || 'postgres',
+  host: process.env.DATABASE_HOST || 'localhost',
+  port: parseInt(process.env.DATABASE_PORT || '5433', 10),
+  username: process.env.DATABASE_USERNAME || 'postgres',
+  password: process.env.DATABASE_PASSWORD || 'postgres',
+  database: process.env.DATABASE_NAME || 'aadhya_db',
   entities: ['dist/**/*.entity{.ts,.js}'],
   migrations: ['dist/migrations/*{.ts,.js}'],
   autoLoadEntities: true,

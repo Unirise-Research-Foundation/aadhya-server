@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 import { CommonEntity } from '../entities/common.entity';
 
 @Entity()
-export class Child extends CommonEntity {
+export class Person extends CommonEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
