@@ -47,7 +47,7 @@ export class PersonController {
   @Put(':personId')
   @Version('1')
   async updatePerson(
-    @Param('personId') personId: string,
+    @Param('personId', new ParseUUIDPipe()) personId: string,
     @Body() updatePersonDto: UpdatePersonDto,
   ) {
     return this.personService.updatePerson(personId, updatePersonDto);
