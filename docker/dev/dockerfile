@@ -4,8 +4,15 @@ FROM node:20
 # Set working directory
 WORKDIR /usr/src/app
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Install pnpm globally and Doppler CLI
+RUN npm install -g pnpm && \
+    apt-get update && \
+    apt-get install -y apt-transport-https ca-certificates curl gnupg && \
+    curl -sLf --retry 3 --tlsv1.2 --proto "=https" 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main" | tee /etc/apt/sources.list.d/doppler-cli.list && \
+    apt-get update && \
+    apt-get install -y doppler && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy package files first to install deps
 COPY package*.json ./
@@ -16,11 +23,18 @@ RUN pnpm install
 # Copy source code
 COPY . .
 
+# Copy and make entrypoint script executable
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Install dev tools like ts-node-dev
 RUN pnpm add -D ts-node-dev
 
 # Expose port used by NestJS
 EXPOSE 3001
 
+# Set entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
 # Start app in dev mode
-CMD ["pnpm", "start:dev"]
+CMD ["pnpm", "start:dev:local"]
