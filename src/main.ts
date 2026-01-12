@@ -4,11 +4,16 @@ import { VersioningType, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // Enable CORS globally
+  
+  // Set global prefix
+  app.setGlobalPrefix('api');
+  
+  // Enable versioning
   app.enableVersioning({
     type: VersioningType.URI,
   });
 
+  // Enable CORS globally
   app.enableCors();
 
   // Enable validation pipe globally
