@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToOne, OneToMany } from 'typeorm';
 import { CommonEntity } from '../entities/common.entity';
-import { Intelligences } from './intelligences.entity';
+import { Intelligence } from './intelligence.entity';
 import { Personality } from './personality.entity';
 import { Physical } from './physical.entity';
 import { Financial } from './financial.entity';
@@ -17,8 +17,17 @@ export class Person extends CommonEntity {
   @Column()
   yob: number; // year of birth
 
-  @OneToOne(() => Intelligences, (intelligences) => intelligences.person)
-  intelligences?: Intelligences;
+  @Column({ unique: true })
+  username: string;
+
+  @Column()
+  password: string; // hashed password
+
+  @Column()
+  role: string;
+
+  @OneToOne(() => Intelligence, (intelligence) => intelligence.person)
+  intelligence?: Intelligence;
 
   @OneToOne(() => Personality, (personality) => personality.person)
   personality?: Personality;

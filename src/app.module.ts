@@ -4,11 +4,15 @@ import typeORM from './typeorm.config';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { PersonModule } from './person/person.module';
-import { QuestionsModule } from './questions/questions.module';
+import { ActivitiesModule } from './activities/activities.module';
+import { AssessmentsModule } from './assessments/assessments.module';
+import { AuthModule } from './auth/auth.module';
+import { ResponsesModule } from './responses/responses.module';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -21,12 +25,19 @@ import { QuestionsModule } from './questions/questions.module';
       inject: [ConfigService],
       useFactory: (ConfigService: ConfigService) => ConfigService.get('typeorm') as any,
     }),
+    AuthModule,
     PersonModule,
-    QuestionsModule,
+    ActivitiesModule,
+    AssessmentsModule,
+    ResponsesModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_GUARD, // Global JWT authentication guard
+      useClass: JwtAuthGuard,
+    },
     {
       provide: APP_INTERCEPTOR, // Tells Nest to apply globally
       useClass: ResponseInterceptor, // interceptor logic
