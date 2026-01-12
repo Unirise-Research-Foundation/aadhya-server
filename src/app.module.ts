@@ -8,6 +8,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { PersonModule } from './person/person.module';
+import { QuestionsModule } from './questions/questions.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PersonModule } from './person/person.module';
       useFactory: (ConfigService: ConfigService) => ConfigService.get('typeorm') as any,
     }),
     PersonModule,
+    QuestionsModule,
   ],
   controllers: [AppController],
   providers: [
