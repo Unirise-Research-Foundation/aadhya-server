@@ -41,6 +41,10 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env.backup
+
+# Doppler files (doppler.yaml should be committed, but backup files should not)
+.doppler.backup
 
 # temp directory
 .temp

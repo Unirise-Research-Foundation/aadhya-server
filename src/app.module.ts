@@ -7,7 +7,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import { ChildModule } from './child/child.module';
+import { PersonModule } from './person/person.module';
+import { QuestionsModule } from './questions/questions.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { ChildModule } from './child/child.module';
       inject: [ConfigService],
       useFactory: (ConfigService: ConfigService) => ConfigService.get('typeorm') as any,
     }),
-    ChildModule,
+    PersonModule,
+    QuestionsModule,
   ],
   controllers: [AppController],
   providers: [
