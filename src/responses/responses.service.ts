@@ -178,7 +178,7 @@ export class ResponsesService {
     const attribute = activity.attribute || activity.domain;
 
     // Get score adjustment from metadata options
-    const options = activity.metadata?.options || [];
+    const options = (activity.metadata?.options || []) as Array<{ value: number; label: string; scoreAdjustment: number }>;
     const selectedOption = options.find((opt: any) => opt.value === optionValue);
 
     if (!selectedOption) {

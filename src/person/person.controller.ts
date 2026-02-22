@@ -11,10 +11,14 @@ import {
   Put,
   Delete,
   Version,
+  UseGuards,
 } from '@nestjs/common';
 import { PersonService } from './person.service';
 import { CreatePersonDto } from './dto/create-person.dto';
 import { UpdatePersonDto } from './dto/update-person.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller({
   path: 'persons',
@@ -22,6 +26,22 @@ import { UpdatePersonDto } from './dto/update-person.dto';
 })
 export class PersonController {
   constructor(private readonly personService: PersonService) {}
+
+  @Get('my-children')
+  @Version('1')
+  @UseGuards(RolesGuard)
+  @Roles('educator')
+  async getMyChildren(@CurrentUser() user: any) {
+    return this.personService.getMyChildren(user.id);
+  }
+
+  @Post('add-child')
+  @Version('1')
+  @UseGuards(RolesGuard)
+  @Roles('educator')
+  async addChild(@CurrentUser() user: any, @Body() dto: CreatePersonDto) {
+    return this.personService.addChild(user.id, dto);
+  }
 
   @Get()
   @Version('1')

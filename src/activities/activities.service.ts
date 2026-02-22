@@ -147,9 +147,30 @@ export class ActivitiesService {
     return this.activitiesData.questions.find((q) => q.id === questionId);
   }
 
+  private mergeMetadataFields(dto: CreateActivityDto | UpdateActivityDto): Record<string, unknown> {
+    const presentationKeys = [
+      'key', 'label', 'icon', 'title', 'subtitle',
+      'snippet', 'description', 'paragraph1', 'paragraph2', 'media',
+    ] as const;
+
+    const merged: Record<string, unknown> = { ...(dto.metadata || {}) };
+
+    for (const field of presentationKeys) {
+      if ((dto as any)[field] !== undefined) {
+        merged[field] = (dto as any)[field];
+      }
+    }
+
+    return merged;
+  }
+
+  private stripPresentationFields(dto: CreateActivityDto | UpdateActivityDto): Omit<typeof dto, 'key' | 'label' | 'icon' | 'title' | 'subtitle' | 'snippet' | 'description' | 'paragraph1' | 'paragraph2' | 'media'> {
+    const { key, label, icon, title, subtitle, snippet, description, paragraph1, paragraph2, media, ...rest } = dto as any;
+    return rest;
+  }
+
   // CRUD operations for entity-based activities
   async createActivity(createActivityDto: CreateActivityDto): Promise<Activity> {
-    // Verify that the assessment exists
     const assessment = await this.assessmentRepository.findOne({
       where: { id: createActivityDto.assessmentId },
     });
@@ -160,7 +181,10 @@ export class ActivitiesService {
       );
     }
 
-    const activity = this.activityRepository.create(createActivityDto);
+    const metadata = this.mergeMetadataFields(createActivityDto);
+    const entityData = this.stripPresentationFields(createActivityDto);
+
+    const activity = this.activityRepository.create({ ...entityData, metadata });
     return await this.activityRepository.save(activity);
   }
 
@@ -195,7 +219,6 @@ export class ActivitiesService {
   async updateActivity(id: string, updateActivityDto: UpdateActivityDto): Promise<Activity> {
     const activity = await this.findOneActivity(id);
 
-    // If assessmentId is being updated, verify the new assessment exists
     if (updateActivityDto.assessmentId && updateActivityDto.assessmentId !== activity.assessmentId) {
       const assessment = await this.assessmentRepository.findOne({
         where: { id: updateActivityDto.assessmentId },
@@ -208,7 +231,13 @@ export class ActivitiesService {
       }
     }
 
-    Object.assign(activity, updateActivityDto);
+    const metadata = this.mergeMetadataFields({
+      ...updateActivityDto,
+      metadata: { ...(activity.metadata || {}), ...(updateActivityDto.metadata || {}) },
+    });
+    const entityData = this.stripPresentationFields(updateActivityDto);
+
+    Object.assign(activity, entityData, { metadata });
     return await this.activityRepository.save(activity);
   }
 

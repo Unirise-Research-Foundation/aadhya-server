@@ -2,6 +2,20 @@ import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 't
 import { CommonEntity } from './common.entity';
 import { Assessment } from './assessment.entity';
 
+export interface ActivityMetadata {
+  key?: string;
+  label?: string;
+  icon?: string;
+  title?: string;
+  subtitle?: string;
+  snippet?: string;
+  description?: string;
+  paragraph1?: string;
+  paragraph2?: string;
+  media?: string;
+  [extra: string]: unknown;
+}
+
 @Entity('activities')
 export class Activity extends CommonEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -24,6 +38,6 @@ export class Activity extends CommonEntity {
   attribute: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  metadata: any;
+  metadata: ActivityMetadata;
 }
 
