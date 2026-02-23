@@ -1,15 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Person } from '../entities/person.entity';
+import { Relationships } from '../entities/relationships.entity';
 import { IsNull, Repository } from 'typeorm';
 import { CreatePersonDto } from './dto/create-person.dto';
 import { UpdatePersonDto } from './dto/update-person.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class PersonService {
   constructor(
     @InjectRepository(Person)
     private readonly personRepository: Repository<Person>,
+    @InjectRepository(Relationships)
+    private readonly relationshipsRepository: Repository<Relationships>,
   ) {}
 
   async getAllPersons(page: number, limit: number): Promise<any> {
@@ -81,5 +85,63 @@ export class PersonService {
 
     const successMsg = `Person with id ${personId} has been soft deleted.`;
     return successMsg;
+  }
+
+  async getMyChildren(educatorId: string): Promise<any> {
+    const relationships = await this.relationshipsRepository.find({
+      where: {
+        personId: educatorId,
+        relationType: 'educator',
+      },
+      relations: ['relatedPerson'],
+    });
+
+    return relationships
+      .filter((r) => r.relatedPerson && !r.relatedPerson.deletedAt)
+      .map((r) => {
+        const person = r.relatedPerson!;
+        return {
+          id: person.id,
+          name: person.name,
+          username: person.username,
+          yob: person.yob,
+          role: person.role,
+          createdAt: person.createdAt,
+        };
+      });
+  }
+
+  async addChild(
+    educatorId: string,
+    dto: CreatePersonDto,
+  ): Promise<any> {
+    const hashedPassword = await bcrypt.hash(dto.name.toLowerCase().replace(/\s+/g, '_'), 10);
+
+    const child = this.personRepository.create({
+      name: dto.name,
+      yob: dto.yob,
+      username: `${dto.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+      password: hashedPassword,
+      role: 'user',
+    });
+
+    const savedChild = await this.personRepository.save(child);
+
+    const relationship = this.relationshipsRepository.create({
+      personId: educatorId,
+      relatedPersonId: savedChild.id,
+      relationType: 'educator',
+    });
+
+    await this.relationshipsRepository.save(relationship);
+
+    return {
+      id: savedChild.id,
+      name: savedChild.name,
+      username: savedChild.username,
+      yob: savedChild.yob,
+      role: savedChild.role,
+      createdAt: savedChild.createdAt,
+    };
   }
 }

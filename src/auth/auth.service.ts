@@ -51,6 +51,7 @@ export class AuthService {
         username: savedPerson.username,
         name: savedPerson.name,
         yob: savedPerson.yob,
+        role: savedPerson.role,
       },
     };
   }
@@ -85,6 +86,7 @@ export class AuthService {
         username: person.username,
         name: person.name,
         yob: person.yob,
+        role: person.role,
       },
     };
   }
@@ -103,6 +105,7 @@ export class AuthService {
       username: person.username,
       name: person.name,
       yob: person.yob,
+      role: person.role,
     };
   }
 }
