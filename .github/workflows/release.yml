@@ -2,6 +2,20 @@ name: Release - Build & Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      run_deploy:
+        description: 'Run deploy job (manual smoke test)'
+        required: false
+        default: false
+        type: boolean
+      target_environment:
+        description: 'Deployment target environment'
+        required: false
+        default: development
+        type: choice
+        options:
+          - development
+          - production
   push:
     branches:
       - release
@@ -47,14 +61,35 @@ jobs:
 
   deploy:
     name: Deploy
-    if: github.ref_name == 'release' || github.ref_name == 'develop'
+    if: github.ref_name == 'release' || github.ref_name == 'develop' || (github.event_name == 'workflow_dispatch' && inputs.run_deploy == true)
     runs-on: ubuntu-latest
     needs: [build]
-    environment: ${{ github.ref_name == 'release' && 'production' || 'development' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.target_environment || github.ref_name == 'release' && 'production' || 'development' }}
     timeout-minutes: 20
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+
+      - name: Resolve deploy settings
+        id: deploy_settings
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            DEPLOY_ENV="${{ inputs.target_environment }}"
+          elif [ "${{ github.ref_name }}" = "release" ]; then
+            DEPLOY_ENV="production"
+          else
+            DEPLOY_ENV="development"
+          fi
+
+          if [ "$DEPLOY_ENV" = "production" ]; then
+            echo "compose_project_name=aadhya-server-prod" >> "$GITHUB_OUTPUT"
+            echo "default_traefik_enable=true" >> "$GITHUB_OUTPUT"
+            echo "default_backend_domain=api.urf.buildstack.space" >> "$GITHUB_OUTPUT"
+          else
+            echo "compose_project_name=aadhya-server-dev" >> "$GITHUB_OUTPUT"
+            echo "default_traefik_enable=false" >> "$GITHUB_OUTPUT"
+            echo "default_backend_domain=api-dev.urf.buildstack.space" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install SSH key
         env:
@@ -110,8 +145,8 @@ jobs:
 
       - name: Build and deploy on VPS
         env:
-          TRAEFIK_ENABLE: ${{ secrets.TRAEFIK_ENABLE || env.TRAEFIK_ENABLE }}
-          BACKEND_DOMAIN: ${{ secrets.BACKEND_DOMAIN || env.BACKEND_DOMAIN }}
+          TRAEFIK_ENABLE: ${{ secrets.TRAEFIK_ENABLE || steps.deploy_settings.outputs.default_traefik_enable }}
+          BACKEND_DOMAIN: ${{ secrets.BACKEND_DOMAIN || steps.deploy_settings.outputs.default_backend_domain }}
           BACKEND_DB_NETWORK: ${{ secrets.BACKEND_DB_NETWORK || env.BACKEND_DB_NETWORK }}
           DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
           DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
@@ -119,6 +154,7 @@ jobs:
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          COMPOSE_PROJECT_NAME: ${{ steps.deploy_settings.outputs.compose_project_name }}
         run: |
           set -euo pipefail
           for required_var in DATABASE_HOST DATABASE_PORT DATABASE_USERNAME DATABASE_PASSWORD DATABASE_NAME JWT_SECRET; do
@@ -129,14 +165,16 @@ jobs:
           done
 
           docker --context "${{ env.VPS_DOCKER_CONTEXT }}" compose \
-            --project-name "${{ env.COMPOSE_PROJECT_NAME }}" \
+            --project-name "$COMPOSE_PROJECT_NAME" \
             -f docker/prod/docker-compose.yml \
             up -d --build --remove-orphans
 
       - name: Show deployed services
+        env:
+          COMPOSE_PROJECT_NAME: ${{ steps.deploy_settings.outputs.compose_project_name }}
         run: |
           docker --context "${{ env.VPS_DOCKER_CONTEXT }}" compose \
-            --project-name "${{ env.COMPOSE_PROJECT_NAME }}" \
+            --project-name "$COMPOSE_PROJECT_NAME" \
             -f docker/prod/docker-compose.yml \
             ps
 
