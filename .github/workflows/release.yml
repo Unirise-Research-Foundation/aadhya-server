@@ -6,6 +6,7 @@ on:
     branches:
       - release
       - develop
+      - feat/docker-prod-deploy
 
 env:
   NODE_VERSION: 20
