@@ -1,0 +1,52 @@
+services:
+  api:
+    image: aadhya-server:prod
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
+      args:
+        NODE_OPTIONS: ${NODE_OPTIONS:---max-old-space-size=768}
+    restart: unless-stopped
+    init: true
+    expose:
+      - '3001'
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_TYPE: ${DATABASE_TYPE:-postgres}
+      DATABASE_HOST: ${DATABASE_HOST:-urf-postgres}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${DATABASE_NAME:-aadhya_db}
+      JWT_SECRET: ${JWT_SECRET:-replace-with-strong-secret}
+      TRAEFIK_ENABLE: ${TRAEFIK_ENABLE:-true}
+      BACKEND_DOMAIN: ${BACKEND_DOMAIN:-api.urf.buildstack.space}
+    labels:
+      - 'traefik.enable=${TRAEFIK_ENABLE:-true}'
+      - 'traefik.docker.network=traefik_network'
+      - 'traefik.http.routers.aadhya-server.entrypoints=websecure'
+      - 'traefik.http.routers.aadhya-server.rule=Host(`${BACKEND_DOMAIN:-api.urf.buildstack.space}`)'
+      - 'traefik.http.routers.aadhya-server.tls=true'
+      - 'traefik.http.routers.aadhya-server.tls.certresolver=lets-encrypt'
+      - 'traefik.http.services.aadhya-server.loadbalancer.server.port=3001'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "require(\"http\").get(\"http://127.0.0.1:3001\",res=>process.exit(res.statusCode < 500 ? 0 : 1)).on(\"error\",()=>process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - traefik_network
+      - backend_db_network
+
+networks:
+  traefik_network:
+    external: true
+  backend_db_network:
+    external: true
+    name: ${BACKEND_DB_NETWORK:-urf-backend-network}

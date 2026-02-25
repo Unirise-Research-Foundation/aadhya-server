@@ -4,5 +4,7 @@ dist
 *.log
 .git
 .gitignore
-Dockerfile
+.github
 docker-compose.yml
+docker-compose.doppler.yml
+docker/dev
