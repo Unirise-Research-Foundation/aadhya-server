@@ -4,6 +4,7 @@ import { Repository, FindOptionsWhere } from 'typeorm';
 import { Response } from '../entities/response.entity';
 import { CreateResponseDto } from './dto/create-response.dto';
 import { Intelligence } from '../entities/intelligence.entity';
+import { Physical } from '../entities/physical.entity';
 import { Activity } from '../entities/activity.entity';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -43,6 +44,28 @@ interface ActivitiesData {
   questions: QuestionActivity[];
 }
 
+// Attribute keys matching aadhya-web/src/constants/activity-constants.ts
+const INTELLIGENCE_ATTRIBUTES = [
+  'linguistic',
+  'logical-mathematical',
+  'spatial',
+  'musical',
+  'bodily-kinesthetic',
+  'interpersonal',
+  'intrapersonal',
+  'naturalistic',
+] as const;
+
+const PHYSICAL_ATTRIBUTES = [
+  'vision',
+  'hearing',
+  'speech',
+  'intellectual',
+  'smell',
+  'touch',
+  'movement',
+] as const;
+
 @Injectable()
 export class ResponsesService {
   private activitiesData: ActivitiesData;
@@ -52,6 +75,8 @@ export class ResponsesService {
     private readonly responseRepository: Repository<Response>,
     @InjectRepository(Intelligence)
     private readonly intelligenceRepository: Repository<Intelligence>,
+    @InjectRepository(Physical)
+    private readonly physicalRepository: Repository<Physical>,
     @InjectRepository(Activity)
     private readonly activityRepository: Repository<Activity>,
   ) {
@@ -160,11 +185,49 @@ export class ResponsesService {
     };
   }
 
+  /**
+   * Get or create the domain record (intelligence or physical) for a person,
+   * initialising all attribute keys with the base score.
+   */
+  private async getOrCreateDomainRecord(
+    domain: string,
+    personId: string,
+    baseScore: number,
+  ): Promise<{ record: Intelligence | Physical; data: Record<string, number> }> {
+    const isPhysical = domain === 'physical';
+    const repo = isPhysical ? this.physicalRepository : this.intelligenceRepository;
+    const attributeKeys = isPhysical ? PHYSICAL_ATTRIBUTES : INTELLIGENCE_ATTRIBUTES;
+
+    const initialScores: Record<string, number> = {};
+    for (const key of attributeKeys) {
+      initialScores[key] = baseScore;
+    }
+
+    let record = await (repo as Repository<any>).findOne({ where: { personId } });
+
+    if (!record) {
+      record = (repo as Repository<any>).create({ personId, data: initialScores });
+    } else if (!record.data) {
+      record.data = { ...initialScores };
+    } else {
+      // Ensure all attribute keys exist, initialise any missing ones
+      for (const key of attributeKeys) {
+        if (record.data[key] === undefined) {
+          record.data[key] = baseScore;
+        }
+      }
+    }
+
+    const data = record.data!;
+    return { record, data };
+  }
+
   async submitAnswer(
     activityId: string,
     optionValue: number,
     personId: string,
-  ): Promise<{ intelligences: Record<string, number> }> {
+    timeSpentSeconds?: number,
+  ): Promise<{ scores: Record<string, number>; domain: string }> {
     // Find the activity in the database
     const activity = await this.activityRepository.findOne({
       where: { id: activityId },
@@ -173,6 +236,8 @@ export class ResponsesService {
     if (!activity) {
       throw new NotFoundException(`Activity with ID ${activityId} not found`);
     }
+
+    const domain = activity.domain; // 'intelligence' | 'physical'
 
     // Use attribute if available, otherwise fall back to domain
     const attribute = activity.attribute || activity.domain;
@@ -195,46 +260,14 @@ export class ResponsesService {
       order: { createdAt: 'DESC' },
     });
 
-    // Get or create intelligence record for the person
-    let intelligence = await this.intelligenceRepository.findOne({
-      where: { personId },
-    });
-
+    // Get or create the correct domain record (intelligence or physical)
     const baseScore = this.activitiesData.scoring.baseScore;
+    const { record: domainRecord, data: domainData } =
+      await this.getOrCreateDomainRecord(domain, personId, baseScore);
 
-    // Initialize scores object
-    const initialScores: Record<string, number> = {};
-    this.activitiesData.metadata.intelligenceDomains.forEach((domain) => {
-      initialScores[domain] = baseScore;
-    });
-
-    if (!intelligence) {
-      // Create new intelligence record with initial scores
-      intelligence = this.intelligenceRepository.create({
-        personId,
-        data: initialScores,
-      });
-    } else {
-      // Initialize data if it doesn't exist or is null
-      if (!intelligence.data) {
-        intelligence.data = { ...initialScores };
-      } else {
-        // Ensure all domains exist, initialize missing ones
-        const data = intelligence.data;
-        this.activitiesData.metadata.intelligenceDomains.forEach((domain) => {
-          if (data[domain] === undefined) {
-            data[domain] = baseScore;
-          }
-        });
-      }
-    }
-
-    // At this point, intelligence is guaranteed to be non-null and have data
-    const intelligenceData = intelligence.data!;
-
-    // Update the score for the specific intelligence attribute
-    if (!intelligenceData[attribute]) {
-      intelligenceData[attribute] = baseScore;
+    // Ensure the specific attribute key exists
+    if (domainData[attribute] === undefined) {
+      domainData[attribute] = baseScore;
     }
 
     // Calculate the actual score adjustment to apply
@@ -247,7 +280,7 @@ export class ResponsesService {
       actualScoreAdjustment = scoreDelta;
 
       // Capture current score before this update
-      const previousScore = intelligenceData[attribute];
+      const previousScore = domainData[attribute];
 
       // Update the existing response
       existingResponse.responseData = {
@@ -257,6 +290,9 @@ export class ResponsesService {
       existingResponse.previousScore = previousScore;
       existingResponse.newScore = previousScore + scoreDelta;
       existingResponse.scoreChange = scoreAdjustment; // Store the new absolute score change
+      if (timeSpentSeconds !== undefined) {
+        existingResponse.timeSpentSeconds = timeSpentSeconds;
+      }
       existingResponse.metadata = {
         ...existingResponse.metadata,
         activityType: activity.type,
@@ -268,9 +304,9 @@ export class ResponsesService {
       await this.responseRepository.save(existingResponse);
     } else {
       // New response - capture previous score for audit log
-      const previousScore = intelligenceData[attribute];
+      const previousScore = domainData[attribute];
 
-      // Step 1: Insert the new response data into the responses table
+      // Insert the new response data into the responses table
       await this.create({
         personId,
         activityId,
@@ -283,23 +319,28 @@ export class ResponsesService {
         previousScore,
         newScore: previousScore + scoreAdjustment,
         scoreChange: scoreAdjustment,
+        timeSpentSeconds,
         metadata: {
           activityType: activity.type,
         },
       });
     }
 
-    // Step 2: Update the scores in the intelligences table
-    intelligenceData[attribute] += actualScoreAdjustment;
+    // Update the score for the specific attribute
+    domainData[attribute] += actualScoreAdjustment;
 
-    // Ensure score doesn't go below 0 or above 100 (optional bounds)
-    intelligenceData[attribute] = Math.max(0, Math.min(100, intelligenceData[attribute]));
+    // Ensure score doesn't go below 0 or above 100
+    domainData[attribute] = Math.max(0, Math.min(100, domainData[attribute]));
 
-    // Save the updated intelligence record
-    await this.intelligenceRepository.save(intelligence);
+    // Save to the correct table
+    const repo = domain === 'physical' ? this.physicalRepository : this.intelligenceRepository;
+    await (repo as Repository<any>).save(domainRecord);
 
     return {
-      intelligences: intelligenceData,
+      scores: domainData,
+      domain,
+      // Backward compatibility: Assessment.tsx reads responseData.intelligences
+      ...(domain === 'intelligence' ? { intelligences: domainData } : {}),
     };
   }
 }

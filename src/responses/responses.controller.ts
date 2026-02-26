@@ -39,6 +39,7 @@ export class ResponsesController {
       submitAnswerDto.activityId,
       submitAnswerDto.optionValue,
       user.id,
+      submitAnswerDto.timeSpentSeconds,
     );
   }
 
