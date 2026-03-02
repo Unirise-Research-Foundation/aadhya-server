@@ -2,8 +2,20 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Intelligence } from '../entities/intelligence.entity';
+import { Physical } from '../entities/physical.entity';
 import { Activity } from '../entities/activity.entity';
 import { Assessment } from '../entities/assessment.entity';
+
+const PHYSICAL_ATTRIBUTES = [
+  'vision',
+  'hearing',
+  'speech',
+  'intellectual',
+  'locomotor',
+  'smell',
+  'touch',
+  'movement',
+] as const;
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import * as fs from 'fs';
@@ -51,6 +63,8 @@ export class ActivitiesService {
   constructor(
     @InjectRepository(Intelligence)
     private readonly intelligenceRepository: Repository<Intelligence>,
+    @InjectRepository(Physical)
+    private readonly physicalRepository: Repository<Physical>,
     @InjectRepository(Activity)
     private readonly activityRepository: Repository<Activity>,
     @InjectRepository(Assessment)
@@ -266,6 +280,23 @@ export class ActivitiesService {
     return {
       intelligences: intelligence.data,
     };
+  }
+
+  async getPhysical(personId: string): Promise<{ physical: Record<string, number> }> {
+    const physical = await this.physicalRepository.findOne({
+      where: { personId },
+    });
+
+    if (!physical || !physical.data) {
+      const baseScore = this.activitiesData.scoring.baseScore;
+      const initialScores: Record<string, number> = {};
+      PHYSICAL_ATTRIBUTES.forEach((attr) => {
+        initialScores[attr] = baseScore;
+      });
+      return { physical: initialScores };
+    }
+
+    return { physical: physical.data };
   }
 }
 

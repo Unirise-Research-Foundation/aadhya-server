@@ -53,6 +53,20 @@ export class ActivitiesController {
     return this.activitiesService.getIntelligences(user.id);
   }
 
+  @Get('physical/:personId')
+  @Version('1')
+  @UseGuards(JwtAuthGuard)
+  async getPhysical(@Param('personId', new ParseUUIDPipe()) personId: string) {
+    return this.activitiesService.getPhysical(personId);
+  }
+
+  @Get('physical')
+  @Version('1')
+  @UseGuards(JwtAuthGuard)
+  async getMyPhysical(@CurrentUser() user: any) {
+    return this.activitiesService.getPhysical(user.id);
+  }
+
   // Entity-based activity CRUD operations
   @Post('entity')
   @Version('1')

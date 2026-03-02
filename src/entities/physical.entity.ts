@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn } from 'ty
 import { CommonEntity } from './common.entity';
 import { Person } from './person.entity';
 
-@Entity()
+@Entity('physical')
 export class Physical extends CommonEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

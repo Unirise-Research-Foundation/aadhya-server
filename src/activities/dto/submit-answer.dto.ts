@@ -1,4 +1,4 @@
-import { IsInt, IsUUID, Min, Max } from 'class-validator';
+import { IsInt, IsOptional, IsUUID, Min, Max } from 'class-validator';
 
 export class SubmitAnswerDto {
   @IsUUID()
@@ -6,7 +6,11 @@ export class SubmitAnswerDto {
 
   @IsInt()
   @Min(1)
-  @Max(5)
+  @Max(10)
   optionValue: number;
-}
 
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  timeSpentSeconds?: number;
+}
