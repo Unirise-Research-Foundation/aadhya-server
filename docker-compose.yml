@@ -5,32 +5,32 @@ services:
       context: .
       dockerfile: docker/dev/Dockerfile
     ports:
-      - "3001:3001"
+      - '3001:3001'
     volumes:
       - .:/usr/src/app
       # - /usr/src/app/node_modules
     command: pnpm start:dev:local
     depends_on:
-      - db  # ensures DB is up before API tries to connect
+      - localhost # ensures DB is up before API tries to connect
     environment:
       # Doppler token (optional - if not provided, will use .env fallback)
       DOPPLER_TOKEN: ${DOPPLER_TOKEN:-}
       # Database configuration
       DATABASE_TYPE: ${DATABASE_TYPE:-postgres}
-      DATABASE_HOST: ${DATABASE_HOST:-db}
-      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_HOST: ${DATABASE_HOST:-localhost}
+      DATABASE_PORT: ${DATABASE_PORT:-5433}
       DATABASE_USERNAME: ${DATABASE_USERNAME:-postgres}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       DATABASE_NAME: ${DATABASE_NAME:-aadhya_db}
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${PORT:-3001}
 
-  db:
+  localhost:
     image: postgres:16-alpine
     container_name: aadhya-postgres
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - '5433:5432'
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
